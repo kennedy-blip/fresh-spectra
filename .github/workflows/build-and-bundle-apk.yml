@@ -1,0 +1,91 @@
+name: Build and bundle Fresh-Spectra Android APK
+
+on:
+  push:
+    branches: [main, 'arena/**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Build web shell and Android package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app for Capacitor
+        run: npm run build
+
+      - name: Generate and sync Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+          node scripts/patch-android-manifest.mjs
+
+      - name: Compile installable debug-signed APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Bundle APK and checksum for static distribution
+        run: |
+          mkdir -p public/releases
+          cp android/app/build/outputs/apk/debug/app-debug.apk public/releases/freshspectra-release.apk
+          sha256sum public/releases/freshspectra-release.apk > public/releases/freshspectra-release.sha256
+
+      - name: Publish APK into the branch for Vercel static download
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f public/releases/freshspectra-release.apk public/releases/freshspectra-release.sha256
+          if git diff --cached --quiet; then
+            echo "APK already matches the branch."
+          else
+            git commit -m "ci: bundle Android APK for one-tap download"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Build final static bundle with APK
+        run: npm run build
+
+      - name: Upload Android package and deployable web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreshSpectra-Android-v1.0.0
+          path: |
+            public/releases/freshspectra-release.apk
+            public/releases/freshspectra-release.sha256
+            dist/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish APK to GitHub Release for version tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: FreshSpectra Food Lab ${{ github.ref_name }}
+          files: |
+            public/releases/freshspectra-release.apk
+            public/releases/freshspectra-release.sha256
+          generate_release_notes: true

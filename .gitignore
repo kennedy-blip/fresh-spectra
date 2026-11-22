@@ -1,0 +1,11 @@
+node_modules/
+dist/
+android/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.tsbuildinfo
+public/releases/*.apk
+public/releases/*.sha256

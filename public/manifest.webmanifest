@@ -1,0 +1,13 @@
+{
+  "name": "Fresh-Spectra Food Lab",
+  "short_name": "Fresh-Spectra",
+  "description": "Offline-first produce freshness and food-safety lab",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07110d",
+  "theme_color": "#07110d",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
