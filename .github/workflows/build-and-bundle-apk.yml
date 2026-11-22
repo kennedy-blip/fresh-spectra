@@ -33,7 +33,10 @@ jobs:
         run: npm ci
 
       - name: Build web app for Capacitor
-        run: npm run build
+        run: |
+          # Keep the previous static download out of the next native APK bundle.
+          rm -f public/releases/freshspectra-release.apk public/releases/freshspectra-release.sha256
+          npm run build
 
       - name: Generate and sync Android project
         run: |
